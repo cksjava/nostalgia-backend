@@ -8,7 +8,34 @@ const { apiRouter } = require("./routes");
 const { notFoundHandler } = require("./middlewares/not-found");
 const { errorHandler } = require("./middlewares/error");
 
+const { createMpvIpc } = require("./services/mpvIpc");
+
 const app = express();
+
+/**
+ * MPV bootstrap
+ */
+const mpv = createMpvIpc();
+mpv.start();
+
+mpv.waitUntilConnected().catch((e) => console.error(e.message));
+
+// make it available in routes/controllers later
+app.locals.mpv = mpv;
+
+// stop mpv on shutdown
+process.on("SIGINT", () => {
+  mpv.stop();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  mpv.stop();
+  process.exit(0);
+});
+
+/**
+ * Middleware
+ */
 
 // Covers static
 app.use(
@@ -25,7 +52,7 @@ app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 app.use(morgan("dev"));
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/health", (req, res) => res.json({ ok: true, mpv: mpv.getState() }));
 
 // API
 app.use("/api", apiRouter);
@@ -42,11 +69,8 @@ app.use(
   })
 );
 
-// SPA fallback (for React Router)
-app.get("*", (req, res, next) => {
-  // If it's an API route, let your 404 handler deal with it
-  if (req.path.startsWith("/api") || req.path.startsWith("/covers")) return next();
-
+// SPA fallback (for React Router) - must be AFTER static + API routes
+app.get(/^(?!\/api(?:\/|$))(?!\/covers(?:\/|$)).*/, (req, res, next) => {
   res.sendFile(path.join(frontendDir, "index.html"), (err) => {
     if (err) next(err);
   });

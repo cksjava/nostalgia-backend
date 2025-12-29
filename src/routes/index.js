@@ -5,6 +5,7 @@ const albumsRouter = require("./albums.routes");
 const tracksRouter = require("./tracks.routes");
 const playlistsRouter = require("./playlists.routes");
 const libraryRouter = require("./library.routes");
+const playerRouter = require("./player.routes");
 
 const apiRouter = express.Router();
 
@@ -13,5 +14,6 @@ apiRouter.use("/albums", albumsRouter);
 apiRouter.use("/tracks", tracksRouter);
 apiRouter.use("/playlists", playlistsRouter);
 apiRouter.use("/library", libraryRouter);
+apiRouter.use("/player", playerRouter);
 
 module.exports = { apiRouter };
