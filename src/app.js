@@ -47,7 +47,10 @@ app.use(
   })
 );
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,   // disables CSP entirely
+  hsts: false,                    // just in case
+}));
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 app.use(morgan("dev"));
