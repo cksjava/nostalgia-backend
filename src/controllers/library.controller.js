@@ -6,7 +6,7 @@ class LibraryController {
       const removeMissing = !!(req.body && req.body.removeMissing);
       const dryRun = !!(req.body && req.body.dryRun);
 
-      const report = await LibraryScanService.scan({ removeMissing, dryRun });
+      const report = LibraryScanService.scan({ removeMissing, dryRun });
       res.json(report);
     } catch (e) {
       next(e);
