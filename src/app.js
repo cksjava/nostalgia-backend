@@ -15,7 +15,10 @@ const app = express();
 /**
  * MPV bootstrap
  */
-const mpv = createMpvIpc();
+const mpv = createMpvIpc({
+  audioDevice: "alsa/plughw:CARD=IQaudIODAC,DEV=0",
+  ao: "alsa",
+});
 mpv.start();
 
 mpv.waitUntilConnected().catch((e) => console.error(e.message));

@@ -14,12 +14,38 @@ function safeUnlinkSocket(sockPath) {
   }
 }
 
+/**
+ * MPV IPC wrapper with optional audio output selection.
+ *
+ * Usage:
+ *   const mpv = createMpvIpc({
+ *     audioDevice: "alsa/plughw:CARD=IQaudIODAC,DEV=0",
+ *     ao: "alsa",
+ *     // extraArgs: ["--volume=70"],
+ *   });
+ *   mpv.start();
+ *
+ * To list devices on the host:
+ *   mpv --audio-device=help
+ */
 function createMpvIpc(opts = {}) {
   const socketPath = opts.socketPath || DEFAULT_SOCKET_PATH;
   const mpvBinary = opts.mpvBinary || "mpv";
 
   // If true, publishes instance on global.__mpv (so TrackService can access it)
   const exposeGlobal = opts.exposeGlobal !== false; // default true
+
+  // NEW: force mpv audio output driver (e.g. "alsa", "pulse", "pipewire")
+  const ao = typeof opts.ao === "string" && opts.ao.trim() ? opts.ao.trim() : null;
+
+  // NEW: mpv audio device string (e.g. "alsa/plughw:CARD=IQaudIODAC,DEV=0")
+  const audioDevice =
+    typeof opts.audioDevice === "string" && opts.audioDevice.trim()
+      ? opts.audioDevice.trim()
+      : null;
+
+  // NEW: allow passing extra mpv args if needed
+  const extraArgs = Array.isArray(opts.extraArgs) ? opts.extraArgs.filter(Boolean) : [];
 
   let mpvProc = null;
   let client = null;
@@ -41,11 +67,7 @@ function createMpvIpc(opts = {}) {
     pending.clear();
   }
 
-  function start() {
-    if (mpvProc) return;
-
-    safeUnlinkSocket(socketPath);
-
+  function buildArgs() {
     const args = [
       "--idle=yes",
       "--no-video",
@@ -56,6 +78,26 @@ function createMpvIpc(opts = {}) {
       "--keep-open=no",
       "--terminal=no",
     ];
+
+    // NEW: lock down audio path for predictable kiosk playback
+    if (ao) args.push("--ao=" + ao);
+    if (audioDevice) args.push("--audio-device=" + audioDevice);
+
+    // Optional extra args (volume, cache, etc.)
+    if (extraArgs.length) args.push(...extraArgs);
+
+    return args;
+  }
+
+  function start() {
+    if (mpvProc) return;
+
+    safeUnlinkSocket(socketPath);
+
+    const args = buildArgs();
+
+    // Helpful log once at start (won't spam)
+    console.log("[mpv] starting:", mpvBinary, args.join(" "));
 
     mpvProc = spawn(mpvBinary, args, { stdio: ["ignore", "pipe", "pipe"] });
 
@@ -208,7 +250,8 @@ function createMpvIpc(opts = {}) {
       const startedAt = Date.now();
       const tick = () => {
         if (connected) return resolve(true);
-        if (Date.now() - startedAt > timeoutMs) return reject(new Error("mpv did not connect in time"));
+        if (Date.now() - startedAt > timeoutMs)
+          return reject(new Error("mpv did not connect in time"));
         setTimeout(tick, 100);
       };
       tick();
@@ -218,7 +261,9 @@ function createMpvIpc(opts = {}) {
   function stop() {
     try {
       if (connected && client) {
-        client.write(JSON.stringify({ command: ["quit"], request_id: Date.now() }) + "\n");
+        client.write(
+          JSON.stringify({ command: ["quit"], request_id: Date.now() }) + "\n"
+        );
       }
     } catch {}
 
@@ -245,6 +290,9 @@ function createMpvIpc(opts = {}) {
       connected,
       lastMessage,
       pid: mpvProc?.pid ?? null,
+      ao,
+      audioDevice,
+      extraArgs,
     };
   }
 
