@@ -21,6 +21,6 @@ router.post("/seek", seek);
  * POST /api/player/volume
  * body: { volume: number }  // clamped to 0..100
  */
-router.post("/volume", setVolume);
+router.post("/set-volume", setVolume);
 
 module.exports = router;
