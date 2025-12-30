@@ -7,6 +7,7 @@ const playlistsRouter = require("./playlists.routes");
 const libraryRouter = require("./library.routes");
 const playerRouter = require("./player.routes");
 const audioRoutes = require("./audioDevice.routes");
+const mpvAdminRoutes = require("./mpvAdmin.routes");
 
 const apiRouter = express.Router();
 
@@ -17,5 +18,6 @@ apiRouter.use("/playlists", playlistsRouter);
 apiRouter.use("/library", libraryRouter);
 apiRouter.use("/player", playerRouter);
 apiRouter.use("/audio", audioRoutes);
+apiRouter.use("/mpv", mpvAdminRoutes);
 
 module.exports = { apiRouter };

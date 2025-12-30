@@ -8,29 +8,31 @@ const { apiRouter } = require("./routes");
 const { notFoundHandler } = require("./middlewares/not-found");
 const { errorHandler } = require("./middlewares/error");
 
-const { createMpvIpc } = require("./services/mpvIpc");
-const mpvopts = require("./mpvopts.json");
+// const { createMpvIpc } = require("./services/mpvIpc");
+// const mpvopts = require("./mpvopts.json");
+const { MpvManagerService } = require("./services/mpvManager.service");
 
 const app = express();
 
 /**
  * MPV bootstrap
  */
-const mpv = createMpvIpc(mpvopts);
-mpv.start();
-
-mpv.waitUntilConnected().catch((e) => console.error(e.message));
+MpvManagerService.startFromConfig().catch((e) => console.error(e?.message || e));
 
 // make it available in routes/controllers later
-app.locals.mpv = mpv;
+Object.defineProperty(app.locals, "mpv", {
+  get() {
+    return MpvManagerService.get();
+  },
+});
 
 // stop mpv on shutdown
-process.on("SIGINT", () => {
-  mpv.stop();
+process.on("SIGINT", async () => {
+  await MpvManagerService.stop();
   process.exit(0);
 });
-process.on("SIGTERM", () => {
-  mpv.stop();
+process.on("SIGTERM", async () => {
+  await MpvManagerService.stop();
   process.exit(0);
 });
 

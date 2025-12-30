@@ -79,7 +79,7 @@ function createMpvIpc(opts = {}) {
       "--terminal=no",
     ];
 
-    // NEW: lock down audio path for predictable kiosk playback
+    // lock down audio path for predictable kiosk playback
     if (ao) args.push("--ao=" + ao);
     if (audioDevice) args.push("--audio-device=" + audioDevice);
 
@@ -142,7 +142,7 @@ function createMpvIpc(opts = {}) {
 
         // expose globally for services (optional)
         if (exposeGlobal) {
-          global.__mpv = api; // <-- IMPORTANT for your TrackService.playTrackById()
+          global.__mpv = api; // IMPORTANT for services that access the current MPV instance
         }
       });
 
@@ -243,6 +243,11 @@ function createMpvIpc(opts = {}) {
     });
   }
 
+  // ✅ NEW: alias commonly-used name for sendCommand
+  function command(commandArray, opts2 = {}) {
+    return sendCommand(commandArray, opts2);
+  }
+
   function waitUntilConnected(timeoutMs = 5000) {
     if (connected) return Promise.resolve(true);
 
@@ -261,9 +266,7 @@ function createMpvIpc(opts = {}) {
   function stop() {
     try {
       if (connected && client) {
-        client.write(
-          JSON.stringify({ command: ["quit"], request_id: Date.now() }) + "\n"
-        );
+        client.write(JSON.stringify({ command: ["quit"], request_id: Date.now() }) + "\n");
       }
     } catch {}
 
@@ -301,6 +304,8 @@ function createMpvIpc(opts = {}) {
     stop,
     sendToMpv,
     sendCommand,
+    // ✅ NEW: expose alias so higher-level services can call mpv.command([...])
+    command,
     waitUntilConnected,
     getState,
     get socketPath() {
