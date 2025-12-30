@@ -9,16 +9,14 @@ const { notFoundHandler } = require("./middlewares/not-found");
 const { errorHandler } = require("./middlewares/error");
 
 const { createMpvIpc } = require("./services/mpvIpc");
+const mpvopts = require("./mpvopts.json");
 
 const app = express();
 
 /**
  * MPV bootstrap
  */
-const mpv = createMpvIpc({
-  audioDevice: "alsa/plughw:CARD=IQaudIODAC,DEV=0",
-  ao: "alsa",
-});
+const mpv = createMpvIpc(mpvopts);
 mpv.start();
 
 mpv.waitUntilConnected().catch((e) => console.error(e.message));
